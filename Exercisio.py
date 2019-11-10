@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split, KFold,LeaveOneOut
 # To model the Gaussian Navie Bayes classifier
 from sklearn.naive_bayes import GaussianNB
 # To calculate the accuracy score of the model
-from sklearn.metrics import accuracy_score,mean_squared_error
+from sklearn.metrics import accuracy_score,mean_squared_error, mean_absolute_error
 from sklearn.neighbors import KNeighborsClassifier
 from math import sqrt
 
@@ -31,14 +31,13 @@ def exercisio1():
     clf.fit(features_train, target_train)
 
     #test the predictor against the train data
-    train_pred = clf.predict(features_train)
-    print("Accuracy train data")
-    print(accuracy_score(target_train, train_pred, normalize=True))
+    pred_train = clf.predict(features_train)
+    print("Accuracy train data: {}".format(accuracy_score(target_train, pred_train, normalize=True)))
+
 
     # test the predictor against the test data
-    target_pred = clf.predict(features_test)
-    print("Accuracy test data")
-    print(accuracy_score(target_test, target_pred, normalize=True))
+    pred_test = clf.predict(features_test)
+    print("Accuracy test data: {}".format(accuracy_score(target_test, pred_test, normalize=True)))
 
 
 def exercisio2():
@@ -52,22 +51,23 @@ def exercisio2():
     fold=5
     kf = KFold(n_splits=fold, random_state=None, shuffle=False)
     # iterate over 5 foldings
-    avg = 0
+    avg_test = 0
+    avg_train = 0
     for train_index, test_index in kf.split(features):
-        print("Fold: ")
-        print(fold)
         features_train = features[train_index]
         features_test = features[test_index]
         target_train = target[train_index]
         target_test = target[test_index]
         knn = KNeighborsClassifier(n_neighbors=5, metric='euclidean')
         knn.fit(features_train, target_train)
-        target_pred = knn.predict(features_test)
-        print(accuracy_score(target_test, target_pred, normalize=True))
-        avg+=accuracy_score(target_test, target_pred, normalize=True)
-    avg /= fold
-    print("Accuracy target data")
-    print(avg)
+        pred_test = knn.predict(features_test)
+        pred_train = knn.predict(features_train)
+        avg_test += accuracy_score(target_test, pred_test, normalize=True)
+        avg_train += accuracy_score(target_train, pred_train, normalize=True)
+    avg_test /= fold
+    avg_train/= fold
+    print("Accuracy test data: {}".format(avg_test))
+    print("Accuracy train data: {}".format(avg_train))
 
 
 def exercisio3():
@@ -80,23 +80,25 @@ def exercisio3():
     # declare the last column as class
     target = adult_df.values[:, 10]
 
-    #lab_enc = preprocessing.LabelEncoder()
-    #target = lab_enc.fit_transform(target)
     loo = LeaveOneOut()
-    rms=0
+    rms_train=0
+    rms_test = 0
     k=0
     for train_index, test_index in loo.split(features):
         features_train = features[train_index]
         features_test = features[test_index]
         target_train = target[train_index]
         target_test = target[test_index]
-        clf = linear_model.Lasso(alpha=1)
+        clf = linear_model.Lasso(alpha=1, random_state=None)
         clf.fit(features_train, target_train)
+        pred_train=clf.predict(features_train)
         pred_test = clf.predict(features_test)
-        k =+ 1
-        rms+=sqrt(mean_squared_error(pred_test, target_test))
+        k += 1
+        rms_train += sqrt(mean_squared_error(pred_train, target_train))
+        rms_test += sqrt(mean_squared_error(pred_test, target_test))
 
-    print(rms/k)
+    print("RMSE medio for test data: {}".format(rms_test / k))
+    print("RMSE medio for train data: {}".format(rms_train / k))
 
 
 def exercisio4():
@@ -114,11 +116,10 @@ def exercisio4():
     # kfold the data with n=5
     kf = KFold(n_splits=5, random_state=None, shuffle=False)
     # iterate over 5 foldings
-    fold = 1
-    MSE = 0
+    fold = 0
+    MSE_train = 0
+    MSE_test = 0
     for train_index, test_index in kf.split(features):
-        print("Fold: ")
-        print(fold)
         features_train = features[train_index]
         features_test = features[test_index]
         target_train = target[train_index]
@@ -129,14 +130,16 @@ def exercisio4():
 
         # test the predictor against the train data
         pred_train = clf.predict(features_train)
-        print("MSE for train data")
-        print(mean_squared_error(pred_train, target_train))
 
+        #pred_train=lab_enc.inverse_transform(pred_train)
         # test the predictor against the test data
         pred_test = clf.predict(features_test)
-        print("MSE for Test Data")
-        MSE += mean_squared_error(pred_test, target_test)
-        print(mean_squared_error(pred_test, target_test))
+
+        #pred_test = lab_enc.inverse_transform(pred_test)
         fold += 1
-    print("MSE medio for test data")
-    print(MSE/fold)
+        #print("Fold: {} MSE for Test Data: {}".format(fold, sqrt(mean_absolute_error(pred_test, target_test))))
+        MSE_train += mean_absolute_error(pred_train, target_train)
+        MSE_test += mean_absolute_error(pred_test, target_test)
+
+    print("MAE medio for test data: {}".format(MSE_test/fold))
+    print("MAE medio for train data: {}".format(MSE_train / fold))
